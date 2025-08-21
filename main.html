@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>启明星 - AI学习助手平台</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
+    <!-- 登录/注册页面 -->
+    <div id="auth-page" class="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+        <div class="max-w-md w-full space-y-8">
+            <div class="text-center">
+                <div class="mx-auto h-12 w-12 bg-indigo-600 rounded-full flex items-center justify-center">
+                    <i class="fas fa-star text-white text-xl"></i>
+                </div>
+                <h2 class="mt-6 text-3xl font-extrabold text-gray-900">启明星</h2>
+                <p class="mt-2 text-sm text-gray-600">AI驱动的个人学习助手</p>
+            </div>
+            
+            <!-- 登录表单 -->
+            <div id="login-form" class="bg-white rounded-lg shadow-md p-8">
+                <h3 class="text-xl font-semibold text-gray-900 mb-6">登录账户</h3>
+                <form class="space-y-6">
+                    <div>
+                        <label for="login-email" class="block text-sm font-medium text-gray-700">邮箱地址</label>
+                        <input id="login-email" type="email" required 
+                               class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label for="login-password" class="block text-sm font-medium text-gray-700">密码</label>
+                        <input id="login-password" type="password" required 
+                               class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                    <button type="submit" id="login-btn"
+                            class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                        登录
+                    </button>
+                </form>
+                <div class="mt-6 text-center">
+                    <button id="show-register" class="text-indigo-600 hover:text-indigo-500 text-sm">
+                        还没有账户？立即注册
+                    </button>
+                </div>
+            </div>
+
+            <!-- 注册表单 -->
+            <div id="register-form" class="bg-white rounded-lg shadow-md p-8 hidden">
+                <h3 class="text-xl font-semibold text-gray-900 mb-6">创建账户</h3>
+                <form class="space-y-6">
+                    <div>
+                        <label for="register-name" class="block text-sm font-medium text-gray-700">姓名</label>
+                        <input id="register-name" type="text" required 
+                               class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label for="register-email" class="block text-sm font-medium text-gray-700">邮箱地址</label>
+                        <input id="register-email" type="email" required 
+                               class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label for="register-password" class="block text-sm font-medium text-gray-700">密码</label>
+                        <input id="register-password" type="password" required 
+                               class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label for="register-confirm-password" class="block text-sm font-medium text-gray-700">确认密码</label>
+                        <input id="register-confirm-password" type="password" required 
+                               class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                    <button type="submit" id="register-btn"
+                            class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                        注册
+                    </button>
+                </form>
+                <div class="mt-6 text-center">
+                    <button id="show-login" class="text-indigo-600 hover:text-indigo-500 text-sm">
+                        已有账户？立即登录
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 主应用界面 -->
+    <div id="main-app" class="hidden min-h-screen bg-gray-50">
+        <!-- 顶部导航栏 -->
+        <nav class="bg-white shadow-sm border-b border-gray-200">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between h-16">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0 flex items-center">
+                            <div class="h-8 w-8 bg-indigo-600 rounded-full flex items-center justify-center">
+                                <i class="fas fa-star text-white text-sm"></i>
+                            </div>
+                            <span class="ml-2 text-xl font-bold text-gray-900">启明星</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <span id="user-name" class="text-sm text-gray-700"></span>
+                        <button id="logout-btn" class="text-gray-500 hover:text-gray-700">
+                            <i class="fas fa-sign-out-alt"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <!-- 主内容区域 -->
+        <div class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+            <div class="px-4 py-6 sm:px-0">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-200px)]">
+                    
+                    <!-- 左侧：OKR 和聊天历史 -->
+                    <div class="lg:col-span-1 space-y-6">
+                        <!-- OKR 卡片 -->
+                        <div class="bg-white rounded-lg shadow p-6">
+                            <div class="flex items-center justify-between mb-4">
+                                <h3 class="text-lg font-medium text-gray-900">我的学习目标</h3>
+                                <button id="edit-okr-btn" class="text-indigo-600 hover:text-indigo-500">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                            </div>
+                            
+                            <!-- OKR 显示区域 -->
+                            <div id="okr-display" class="space-y-4">
+                                <div class="text-center text-gray-500 py-8">
+                                    <i class="fas fa-target text-4xl mb-4"></i>
+                                    <p>还没有设置学习目标</p>
+                                    <button id="create-okr-btn" class="mt-2 text-indigo-600 hover:text-indigo-500">
+                                        立即创建
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- OKR 编辑表单 -->
+                            <div id="okr-form" class="hidden space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">学习目标 (Objective)</label>
+                                    <textarea id="objective-input" rows="2" 
+                                              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                                              placeholder="例如：掌握数据结构与算法基础"></textarea>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">关键结果 (Key Results)</label>
+                                    <div class="space-y-2">
+                                        <input id="kr1-input" type="text" 
+                                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                                               placeholder="关键结果 1">
+                                        <input id="kr2-input" type="text" 
+                                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                                               placeholder="关键结果 2">
+                                        <input id="kr3-input" type="text" 
+                                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                                               placeholder="关键结果 3">
+                                    </div>
+                                </div>
+                                <div class="flex space-x-2">
+                                    <button id="save-okr-btn" 
+                                            class="flex-1 bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700">
+                                        保存
+                                    </button>
+                                    <button id="cancel-okr-btn" 
+                                            class="flex-1 bg-gray-300 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-400">
+                                        取消
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 聊天历史 -->
+                        <div class="bg-white rounded-lg shadow p-6 flex-1">
+                            <h3 class="text-lg font-medium text-gray-900 mb-4">聊天历史</h3>
+                            <div id="chat-sessions" class="space-y-2 max-h-64 overflow-y-auto">
+                                <div class="text-center text-gray-500 py-4">
+                                    <i class="fas fa-comments text-2xl mb-2"></i>
+                                    <p class="text-sm">还没有聊天记录</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 右侧：AI 聊天界面 -->
+                    <div class="lg:col-span-2">
+                        <div class="bg-white rounded-lg shadow h-full flex flex-col">
+                            <!-- 聊天头部 -->
+                            <div class="px-6 py-4 border-b border-gray-200">
+                                <div class="flex items-center">
+                                    <div class="h-10 w-10 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
+                                        <i class="fas fa-robot text-white"></i>
+                                    </div>
+                                    <div class="ml-3">
+                                        <h3 class="text-lg font-medium text-gray-900">AI 学习助手</h3>
+                                        <p class="text-sm text-gray-500">随时为您答疑解惑</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 聊天消息区域 -->
+                            <div id="chat-messages" class="flex-1 px-6 py-4 overflow-y-auto space-y-4">
+                                <!-- 欢迎消息 -->
+                                <div class="flex items-start space-x-3">
+                                    <div class="h-8 w-8 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center flex-shrink-0">
+                                        <i class="fas fa-robot text-white text-sm"></i>
+                                    </div>
+                                    <div class="bg-gray-100 rounded-lg px-4 py-2 max-w-xs lg:max-w-md">
+                                        <p class="text-sm text-gray-800">
+                                            你好！我是你的AI学习助手。你可以：<br>
+                                            • 问我"今天做什么？"获取学习建议<br>
+                                            • 向我提问任何学习相关的问题<br>
+                                            • 让我帮你制定学习计划
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 聊天输入区域 -->
+                            <div class="px-6 py-4 border-t border-gray-200">
+                                <div class="flex space-x-4">
+                                    <div class="flex-1">
+                                        <input id="chat-input" type="text" 
+                                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                                               placeholder="输入你的问题...">
+                                    </div>
+                                    <button id="send-btn" 
+                                            class="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                        <i class="fas fa-paper-plane"></i>
+                                    </button>
+                                </div>
+                                <!-- 快捷按钮 -->
+                                <div class="mt-3 flex flex-wrap gap-2">
+                                    <button class="quick-question bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-sm hover:bg-gray-200" 
+                                            data-question="今天我应该做什么？">
+                                        今天做什么？
+                                    </button>
+                                    <button class="quick-question bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-sm hover:bg-gray-200" 
+                                            data-question="帮我制定这周的学习计划">
+                                        制定学习计划
+                                    </button>
+                                    <button class="quick-question bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-sm hover:bg-gray-200" 
+                                            data-question="解释一下什么是数据结构？">
+                                        什么是数据结构？
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 加载指示器 -->
+    <div id="loading" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-lg p-6 flex items-center space-x-3">
+            <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-600"></div>
+            <span class="text-gray-700">处理中...</span>
+        </div>
+    </div>
+
+    <script>
+        // 简化的应用逻辑，专注于页面跳转
+        class SimpleApp {
+            constructor() {
+                this.currentUser = null;
+                this.currentOKR = null;
+                this.chatHistory = [];
+                this.init();
+            }
+
+            init() {
+                console.log('启明星应用初始化...');
+                this.bindEvents();
+                this.checkAuthStatus();
+            }
+
+            bindEvents() {
+                // 表单切换
+                document.getElementById('show-register')?.addEventListener('click', () => this.showRegisterForm());
+                document.getElementById('show-login')?.addEventListener('click', () => this.showLoginForm());
+                
+                // 登录注册
+                document.getElementById('login-btn')?.addEventListener('click', (e) => this.handleLogin(e));
+                document.getElementById('register-btn')?.addEventListener('click', (e) => this.handleRegister(e));
+                
+                // 登出
+                document.getElementById('logout-btn')?.addEventListener('click', () => this.logout());
+                
+                // OKR 管理
+                document.getElementById('create-okr-btn')?.addEventListener('click', () => this.showOKRForm());
+                document.getElementById('edit-okr-btn')?.addEventListener('click', () => this.showOKRForm());
+                document.getElementById('save-okr-btn')?.addEventListener('click', () => this.saveOKR());
+                document.getElementById('cancel-okr-btn')?.addEventListener('click', () => this.hideOKRForm());
+                
+                // 聊天功能
+                document.getElementById('send-btn')?.addEventListener('click', () => this.sendMessage());
+                document.getElementById('chat-input')?.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') this.sendMessage();
+                });
+                
+                // 快捷问题
+                document.querySelectorAll('.quick-question').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const question = e.target.getAttribute('data-question');
+                        document.getElementById('chat-input').value = question;
+                        this.sendMessage();
+                    });
+                });
+            }
+
+            checkAuthStatus() {
+                const userData = localStorage.getItem('currentUser');
+                if (userData) {
+                    this.currentUser = JSON.parse(userData);
+                    this.showMainApp();
+                } else {
+                    this.showAuthPage();
+                }
+            }
+
+            showAuthPage() {
+                document.getElementById('auth-page')?.classList.remove('hidden');
+                document.getElementById('main-app')?.classList.add('hidden');
+            }
+
+            showMainApp() {
+                document.getElementById('auth-page')?.classList.add('hidden');
+                document.getElementById('main-app')?.classList.remove('hidden');
+                
+                if (this.currentUser) {
+                    document.getElementById('user-name').textContent = this.currentUser.email;
+                }
+                
+                this.loadUserData();
+            }
+
+            showLoginForm() {
+                document.getElementById('login-form')?.classList.remove('hidden');
+                document.getElementById('register-form')?.classList.add('hidden');
+            }
+
+            showRegisterForm() {
+                document.getElementById('register-form')?.classList.remove('hidden');
+                document.getElementById('login-form')?.classList.add('hidden');
+            }
+
+            handleLogin(e) {
+                e.preventDefault();
+                const email = document.getElementById('login-email').value.trim();
+                const password = document.getElementById('login-password').value.trim();
+
+                if (!email || !password) {
+                    alert('请输入邮箱和密码');
+                    return;
+                }
+
+                // 简化登录逻辑 - 任何邮箱密码都可以登录
+                this.currentUser = { email, name: email };
+                localStorage.setItem('currentUser', JSON.stringify(this.currentUser));
+                
+                console.log('登录成功:', this.currentUser);
+                this.showMainApp();
+            }
+
+            handleRegister(e) {
+                e.preventDefault();
+                const name = document.getElementById('register-name').value.trim();
+                const email = document.getElementById('register-email').value.trim();
+                const password = document.getElementById('register-password').value.trim();
+                const confirmPassword = document.getElementById('register-confirm-password').value.trim();
+
+                if (!name || !email || !password || !confirmPassword) {
+                    alert('请填写所有字段');
+                    return;
+                }
+
+                if (password !== confirmPassword) {
+                    alert('密码确认不匹配');
+                    return;
+                }
+
+                alert('注册成功！请登录');
+                this.showLoginForm();
+                
+                // 清空表单
+                document.getElementById('register-name').value = '';
+                document.getElementById('register-email').value = '';
+                document.getElementById('register-password').value = '';
+                document.getElementById('register-confirm-password').value = '';
+            }
+
+            logout() {
+                this.currentUser = null;
+                localStorage.removeItem('currentUser');
+                localStorage.removeItem('currentOKR');
+                localStorage.removeItem('chatHistory');
+                this.showAuthPage();
+                console.log('已登出');
+            }
+
+            loadUserData() {
+                this.loadOKR();
+                this.loadChatHistory();
+            }
+
+            loadOKR() {
+                const okrData = localStorage.getItem('currentOKR');
+                if (okrData) {
+                    this.currentOKR = JSON.parse(okrData);
+                    this.displayOKR(this.currentOKR);
+                }
+            }
+
+            showOKRForm() {
+                document.getElementById('okr-display')?.classList.add('hidden');
+                document.getElementById('okr-form')?.classList.remove('hidden');
+
+                // 如果有现有OKR，填充表单
+                if (this.currentOKR) {
+                    document.getElementById('objective-input').value = this.currentOKR.objective || '';
+                    document.getElementById('kr1-input').value = this.currentOKR.keyResults[0] || '';
+                    document.getElementById('kr2-input').value = this.currentOKR.keyResults[1] || '';
+                    document.getElementById('kr3-input').value = this.currentOKR.keyResults[2] || '';
+                }
+            }
+
+            hideOKRForm() {
+                document.getElementById('okr-form')?.classList.add('hidden');
+                document.getElementById('okr-display')?.classList.remove('hidden');
+            }
+
+            saveOKR() {
+                const objective = document.getElementById('objective-input').value.trim();
+                const kr1 = document.getElementById('kr1-input').value.trim();
+                const kr2 = document.getElementById('kr2-input').value.trim();
+                const kr3 = document.getElementById('kr3-input').value.trim();
+
+                if (!objective) {
+                    alert('请输入学习目标');
+                    return;
+                }
+
+                const keyResults = [kr1, kr2, kr3].filter(kr => kr);
+                if (keyResults.length === 0) {
+                    alert('请至少输入一个关键结果');
+                    return;
+                }
+
+                this.currentOKR = {
+                    objective,
+                    keyResults,
+                    createdAt: new Date().toISOString()
+                };
+
+                localStorage.setItem('currentOKR', JSON.stringify(this.currentOKR));
+                this.displayOKR(this.currentOKR);
+                this.hideOKRForm();
+                
+                console.log('OKR已保存:', this.currentOKR);
+            }
+
+            displayOKR(okr) {
+                const display = document.getElementById('okr-display');
+                if (!display) return;
+
+                display.innerHTML = `
+                    <div class="space-y-4">
+                        <div>
+                            <h4 class="font-medium text-gray-900 mb-2">学习目标</h4>
+                            <p class="text-gray-700 bg-blue-50 p-3 rounded-lg">${okr.objective}</p>
+                        </div>
+                        <div>
+                            <h4 class="font-medium text-gray-900 mb-2">关键结果</h4>
+                            <ul class="space-y-2">
+                                ${okr.keyResults.map((kr, index) => `
+                                    <li class="flex items-center text-gray-700">
+                                        <span class="w-6 h-6 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center text-sm font-medium mr-3">${index + 1}</span>
+                                        ${kr}
+                                    </li>
+                                `).join('')}
+                            </ul>
+                        </div>
+                    </div>
+                `;
+                display.classList.remove('hidden');
+            }
+
+            sendMessage() {
+                const input = document.getElementById('chat-input');
+                const message = input.value.trim();
+                if (!message) return;
+
+                input.value = '';
+                this.addMessageToChat('user', message);
+                
+                // 模拟AI响应
+                setTimeout(() => {
+                    const response = this.getAIResponse(message);
+                    this.addMessageToChat('assistant', response);
+                    
+                    // 保存聊天记录
+                    this.chatHistory.push(
+                        { role: 'user', content: message, timestamp: new Date().toISOString() },
+                        { role: 'assistant', content: response, timestamp: new Date().toISOString() }
+                    );
+                    localStorage.setItem('chatHistory', JSON.stringify(this.chatHistory));
+                }, 1000);
+            }
+
+            getAIResponse(message) {
+                const lowerMessage = message.toLowerCase();
+                
+                // 检查是否询问今日任务
+                if (lowerMessage.includes('今天') && (lowerMessage.includes('做什么') || lowerMessage.includes('任务'))) {
+                    if (this.currentOKR) {
+                        return `基于您的学习目标"${this.currentOKR.objective}"，我为您推荐今日任务：
+
+1. 📚 复习相关理论知识（30分钟）
+2. 💻 完成实践练习（45分钟）  
+3. 📝 整理学习笔记（15分钟）
+
+这些任务将帮助您朝着关键结果迈进。需要我详细解释某个任务吗？`;
+                    } else {
+                        return '您还没有设置学习目标，建议先创建OKR来明确学习方向，这样我就能为您提供个性化的任务推荐了！';
+                    }
+                }
+
+                // 检查是否询问B+树
+                if (lowerMessage.includes('b+树') || lowerMessage.includes('b+tree')) {
+                    return `B+树是一种自平衡的树数据结构，常用于数据库和文件系统中：
+
+🌳 **主要特点：**
+• 所有叶子节点在同一层
+• 内部节点只存储键值，不存储数据
+• 叶子节点存储所有数据，并通过指针连接
+
+📊 **优势：**
+• 范围查询效率高
+• 磁盘I/O次数少
+• 支持顺序访问
+
+💡 **应用场景：**
+• 数据库索引（如MySQL的InnoDB）
+• 文件系统
+• 需要范围查询的场景
+
+需要我详细解释某个方面吗？`;
+                }
+
+                // 默认响应
+                return `感谢您的提问！这是一个很好的问题。
+
+在当前MVP版本中，我的知识库还在完善中。不过我可以为您提供一些学习建议：
+
+1. 🎯 确保您已设置明确的学习目标
+2. 📚 制定每日学习计划
+3. 💡 遇到问题时多思考和实践
+4. 📝 及时记录学习心得
+
+如果您有具体的学习问题，建议查阅相关教材或向老师请教。我会继续学习，为您提供更好的服务！`;
+            }
+
+            addMessageToChat(role, content) {
+                const messagesContainer = document.getElementById('chat-messages');
+                if (!messagesContainer) return;
+
+                const messageDiv = document.createElement('div');
+                messageDiv.className = 'flex items-start space-x-3 chat-message';
+
+                if (role === 'user') {
+                    messageDiv.innerHTML = `
+                        <div class="h-8 w-8 bg-indigo-600 rounded-full flex items-center justify-center flex-shrink-0">
+                            <i class="fas fa-user text-white text-sm"></i>
+                        </div>
+                        <div class="bg-indigo-100 rounded-lg px-4 py-2 max-w-xs lg:max-w-md ml-auto">
+                            <p class="text-sm text-gray-800">${content}</p>
+                        </div>
+                    `;
+                } else {
+                    messageDiv.innerHTML = `
+                        <div class="h-8 w-8 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center flex-shrink-0">
+                            <i class="fas fa-robot text-white text-sm"></i>
+                        </div>
+                        <div class="bg-gray-100 rounded-lg px-4 py-2 max-w-xs lg:max-w-md">
+                            <p class="text-sm text-gray-800 whitespace-pre-line">${content}</p>
+                        </div>
+                    `;
+                }
+
+                messagesContainer.appendChild(messageDiv);
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            }
+
+            loadChatHistory() {
+                const historyData = localStorage.getItem('chatHistory');
+                if (historyData) {
+                    this.chatHistory = JSON.parse(historyData);
+                    
+                    // 显示历史消息
+                    this.chatHistory.forEach(msg => {
+                        this.addMessageToChat(msg.role, msg.content);
+                    });
+                }
+            }
+        }
+
+        // 初始化应用
+        document.addEventListener('DOMContentLoaded', () => {
+            new SimpleApp();
+        });
+    </script>
+</body>
+</html>
