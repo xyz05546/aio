@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>个人成长画像 - 启明星平台</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="scripts/supabase-config.js"></script>
+    <script src="scripts/supabase-auth.js"></script>
+    <script src="scripts/growth-profile.js"></script>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- 顶部导航栏 -->
+    <nav class="bg-white shadow-sm border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0 flex items-center">
+                        <div class="h-8 w-8 bg-indigo-600 rounded-full flex items-center justify-center">
+                            <i class="fas fa-star text-white text-sm"></i>
+                        </div>
+                        <span class="ml-2 text-xl font-bold text-gray-900">启明星</span>
+                    </div>
+                    <div class="hidden sm:ml-6 sm:flex sm:space-x-8">
+                        <a href="main.html" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+                            主页
+                        </a>
+                        <a href="dashboard.html" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+                            学习仪表盘
+                        </a>
+                        <a href="growth-profile.html" class="border-indigo-500 text-gray-900 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+                            成长画像
+                        </a>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <span id="user-name" class="text-sm text-gray-700"></span>
+                    <button id="logout-btn" class="text-gray-500 hover:text-gray-700">
+                        <i class="fas fa-sign-out-alt"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主内容区域 -->
+    <div class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+        <div class="px-4 py-6 sm:px-0">
+            <!-- 页面标题 -->
+            <div class="mb-6">
+                <h1 class="text-2xl font-bold text-gray-900">个人成长画像</h1>
+                <p class="mt-1 text-sm text-gray-600">可视化展示您的技能发展轨迹和学习进度</p>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- 左侧：技能概览 -->
+                <div class="lg:col-span-1 space-y-6">
+                    <!-- 技术技能卡片 -->
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <h3 class="text-lg font-medium text-gray-900 mb-4">技术技能</h3>
+                        <div id="technicalSkills" class="space-y-4">
+                            <!-- 技能将通过JavaScript动态添加 -->
+                            <div class="flex justify-center items-center h-32 text-gray-400">
+                                <i class="fas fa-spinner fa-spin mr-2"></i> 加载中...
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 软技能卡片 -->
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <h3 class="text-lg font-medium text-gray-900 mb-4">软技能</h3>
+                        <div id="softSkills" class="space-y-4">
+                            <!-- 技能将通过JavaScript动态添加 -->
+                            <div class="flex justify-center items-center h-32 text-gray-400">
+                                <i class="fas fa-spinner fa-spin mr-2"></i> 加载中...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 右侧：图表和学习活动 -->
+                <div class="lg:col-span-2 space-y-6">
+                    <!-- 技能雷达图 -->
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <h3 class="text-lg font-medium text-gray-900 mb-4">技能雷达图</h3>
+                        <div class="h-64">
+                            <canvas id="skillsRadarChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- 学习时间趋势 -->
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <h3 class="text-lg font-medium text-gray-900 mb-4">学习时间趋势</h3>
+                        <div class="h-64">
+                            <canvas id="learningTimeChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- 最近学习活动 -->
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <h3 class="text-lg font-medium text-gray-900 mb-4">最近学习活动</h3>
+                        <div id="learningActivities" class="space-y-4">
+                            <!-- 学习活动将通过JavaScript动态添加 -->
+                            <div class="flex justify-center items-center h-32 text-gray-400">
+                                <i class="fas fa-spinner fa-spin mr-2"></i> 加载中...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 加载指示器 -->
+    <div id="loading" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-lg p-6 flex items-center space-x-3">
+            <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-600"></div>
+            <span class="text-gray-700">处理中...</span>
+        </div>
+    </div>
+
+    <script>
+        // 登出功能
+        document.getElementById('logout-btn').addEventListener('click', async () => {
+            if (confirm('确定要退出登录吗？')) {
+                const result = await supabaseManager.signOut();
+                if (result.success) {
+                    window.location.href = 'index.html';
+                } else {
+                    alert('登出失败: ' + result.error);
+                }
+            }
+        });
+
+        // 显示用户名
+        async function displayUserName() {
+            const user = await supabaseManager.getCurrentUser();
+            if (user) {
+                const userNameEl = document.getElementById('user-name');
+                if (userNameEl) {
+                    userNameEl.textContent = user.user_metadata?.name || user.email;
+                }
+            } else {
+                window.location.href = 'index.html';
+            }
+        }
+
+        // 页面加载完成后显示用户名
+        document.addEventListener('DOMContentLoaded', displayUserName);
+    </script>
+</body>
+</html>

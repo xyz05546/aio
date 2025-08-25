@@ -6,6 +6,10 @@
     <title>启明星 - AI学习助手平台</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="scripts/supabase-config.js"></script>
+    <script src="scripts/supabase-auth.js"></script>
+    <script src="scripts/version-history.js"></script>
     <style>
         .chat-message {
             animation: fadeIn 0.3s ease-in;
@@ -118,6 +122,14 @@
                             </div>
                             <span class="ml-2 text-xl font-bold text-gray-900">启明星</span>
                         </div>
+                        <div class="hidden sm:ml-6 sm:flex sm:space-x-8">
+                            <a href="dashboard.html" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+                                学习仪表盘
+                            </a>
+                            <a href="growth-profile.html" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+                                成长画像
+                            </a>
+                        </div>
                     </div>
                     <div class="flex items-center space-x-4">
                         <span id="user-name" class="text-sm text-gray-700"></span>
@@ -222,7 +234,7 @@
                             <!-- 聊天消息区域 -->
                             <div id="chat-messages" class="flex-1 px-6 py-4 overflow-y-auto space-y-4">
                                 <!-- 欢迎消息 -->
-                                <div class="flex items-start space-x-3">
+                                <div class="flex items-start space-x-3 welcome-message">
                                     <div class="h-8 w-8 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center flex-shrink-0">
                                         <i class="fas fa-robot text-white text-sm"></i>
                                     </div>
@@ -281,21 +293,70 @@
         </div>
     </div>
 
+    <!-- 版本信息 -->
+    <div class="fixed bottom-4 right-4 text-gray-500 text-sm flex items-center">
+        <span id="version-number">v1.2.0</span>
+        <button id="show-history-btn" class="ml-2 text-indigo-600 hover:text-indigo-800 focus:outline-none">
+            <i class="fas fa-history"></i>
+        </button>
+    </div>
+
+    <!-- 历史更新记录弹窗 -->
+    <div id="history-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-lg p-6 max-w-2xl w-full max-h-[80vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-medium text-gray-900">更新历史记录</h3>
+                <button id="close-history-btn" class="text-gray-500 hover:text-gray-700 focus:outline-none">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div id="history-content" class="space-y-6">
+                <!-- 历史记录内容将通过JavaScript动态添加 -->
+            </div>
+            <div class="mt-6 border-t pt-4">
+                <h4 class="font-medium text-gray-900 mb-2">开发计划</h4>
+                <div id="todo-list" class="space-y-2">
+                    <!-- 待办事项将通过JavaScript动态添加 -->
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
-        // 启明星应用主类
-        class StarApp {
+        // 使用Supabase的应用主类
+        class SupabaseStarApp {
             constructor() {
                 this.currentUser = null;
                 this.currentOKR = null;
+                this.currentSessionId = null;
                 this.chatHistory = [];
                 this.isProcessing = false;
                 this.init();
             }
 
-            init() {
+            async init() {
                 console.log('启明星应用初始化...');
                 this.bindEvents();
-                this.checkAuthStatus();
+                
+                // 监听认证状态变化
+                supabaseManager.onAuthStateChange((event, session) => {
+                    if (event === 'SIGNED_IN') {
+                        this.currentUser = session.user;
+                        this.handleSignIn();
+                    } else if (event === 'SIGNED_OUT') {
+                        this.currentUser = null;
+                        this.handleSignOut();
+                    }
+                });
+
+                // 检查当前认证状态
+                const user = await supabaseManager.getCurrentUser();
+                if (user) {
+                    this.currentUser = user;
+                    this.handleSignIn();
+                } else {
+                    this.showAuthPage();
+                }
             }
 
             bindEvents() {
@@ -393,19 +454,14 @@
                 console.log('事件绑定完成');
             }
 
-            checkAuthStatus() {
-                const userData = localStorage.getItem('currentUser');
-                if (userData) {
-                    try {
-                        this.currentUser = JSON.parse(userData);
-                        this.showMainApp();
-                    } catch (e) {
-                        console.error('用户数据解析失败:', e);
-                        this.showAuthPage();
-                    }
-                } else {
-                    this.showAuthPage();
-                }
+            handleSignIn() {
+                console.log('用户已登录:', this.currentUser);
+                this.showMainApp();
+            }
+
+            handleSignOut() {
+                console.log('用户已登出');
+                this.showAuthPage();
             }
 
             showAuthPage() {
@@ -416,7 +472,7 @@
                 if (mainApp) mainApp.classList.add('hidden');
             }
 
-            showMainApp() {
+            async showMainApp() {
                 const authPage = document.getElementById('auth-page');
                 const mainApp = document.getElementById('main-app');
                 
@@ -426,11 +482,11 @@
                 if (this.currentUser) {
                     const userNameEl = document.getElementById('user-name');
                     if (userNameEl) {
-                        userNameEl.textContent = this.currentUser.name || this.currentUser.email;
+                        userNameEl.textContent = this.currentUser.user_metadata?.name || this.currentUser.email;
                     }
                 }
                 
-                this.loadUserData();
+                await this.loadUserData();
             }
 
             showLoginForm() {
@@ -449,7 +505,7 @@
                 if (loginForm) loginForm.classList.add('hidden');
             }
 
-            handleLogin() {
+            async handleLogin() {
                 const email = document.getElementById('login-email')?.value?.trim();
                 const password = document.getElementById('login-password')?.value?.trim();
 
@@ -458,20 +514,18 @@
                     return;
                 }
 
-                // 简化登录逻辑 - 任何邮箱密码都可以登录
-                this.currentUser = { 
-                    id: Date.now().toString(),
-                    email, 
-                    name: email.split('@')[0] 
-                };
+                this.showLoading(true);
                 
-                localStorage.setItem('currentUser', JSON.stringify(this.currentUser));
+                const result = await supabaseManager.signIn(email, password);
                 
-                console.log('登录成功:', this.currentUser);
-                this.showMainApp();
+                this.showLoading(false);
+                
+                if (!result.success) {
+                    alert('登录失败: ' + result.error);
+                }
             }
 
-            handleRegister() {
+            async handleRegister() {
                 const name = document.getElementById('register-name')?.value?.trim();
                 const email = document.getElementById('register-email')?.value?.trim();
                 const password = document.getElementById('register-password')?.value?.trim();
@@ -487,41 +541,60 @@
                     return;
                 }
 
-                alert('注册成功！请登录');
-                this.showLoginForm();
-                
-                // 清空表单
-                document.getElementById('register-name').value = '';
-                document.getElementById('register-email').value = '';
-                document.getElementById('register-password').value = '';
-                document.getElementById('register-confirm-password').value = '';
-            }
+                if (password.length < 6) {
+                    alert('密码长度至少6位');
+                    return;
+                }
 
-            logout() {
-                if (confirm('确定要退出登录吗？')) {
-                    this.currentUser = null;
-                    localStorage.removeItem('currentUser');
-                    localStorage.removeItem('currentOKR');
-                    localStorage.removeItem('chatHistory');
-                    this.showAuthPage();
-                    console.log('已登出');
+                this.showLoading(true);
+                
+                const result = await supabaseManager.signUp(email, password, name);
+                
+                this.showLoading(false);
+                
+                if (result.success) {
+                    alert('注册成功！请检查邮箱验证链接');
+                    this.showLoginForm();
+                    
+                    // 清空表单
+                    document.getElementById('register-name').value = '';
+                    document.getElementById('register-email').value = '';
+                    document.getElementById('register-password').value = '';
+                    document.getElementById('register-confirm-password').value = '';
+                } else {
+                    alert('注册失败: ' + result.error);
                 }
             }
 
-            loadUserData() {
-                this.loadOKR();
-                this.loadChatHistory();
+            async logout() {
+                if (confirm('确定要退出登录吗？')) {
+                    this.showLoading(true);
+                    
+                    const result = await supabaseManager.signOut();
+                    
+                    this.showLoading(false);
+                    
+                    if (!result.success) {
+                        alert('登出失败: ' + result.error);
+                    }
+                }
             }
 
-            loadOKR() {
-                const okrData = localStorage.getItem('currentOKR');
-                if (okrData) {
-                    try {
-                        this.currentOKR = JSON.parse(okrData);
-                        this.displayOKR(this.currentOKR);
-                    } catch (e) {
-                        console.error('OKR数据解析失败:', e);
-                    }
+            async loadUserData() {
+                await this.loadOKR();
+                await this.loadChatSessions();
+                
+                // 创建默认聊天会话
+                if (!this.currentSessionId) {
+                    await this.createNewChatSession();
+                }
+            }
+
+            async loadOKR() {
+                const result = await supabaseManager.getUserOKR();
+                if (result.success && result.data) {
+                    this.currentOKR = result.data;
+                    this.displayOKR(result.data);
                 }
             }
 
@@ -540,9 +613,9 @@
                     const kr3Input = document.getElementById('kr3-input');
                     
                     if (objectiveInput) objectiveInput.value = this.currentOKR.objective || '';
-                    if (kr1Input) kr1Input.value = this.currentOKR.keyResults[0] || '';
-                    if (kr2Input) kr2Input.value = this.currentOKR.keyResults[1] || '';
-                    if (kr3Input) kr3Input.value = this.currentOKR.keyResults[2] || '';
+                    if (kr1Input) kr1Input.value = this.currentOKR.key_results[0] || '';
+                    if (kr2Input) kr2Input.value = this.currentOKR.key_results[1] || '';
+                    if (kr3Input) kr3Input.value = this.currentOKR.key_results[2] || '';
                 }
             }
 
@@ -554,7 +627,7 @@
                 if (okrDisplay) okrDisplay.classList.remove('hidden');
             }
 
-            saveOKR() {
+            async saveOKR() {
                 const objective = document.getElementById('objective-input')?.value?.trim();
                 const kr1 = document.getElementById('kr1-input')?.value?.trim();
                 const kr2 = document.getElementById('kr2-input')?.value?.trim();
@@ -571,18 +644,16 @@
                     return;
                 }
 
-                this.currentOKR = {
-                    objective,
-                    keyResults,
-                    createdAt: new Date().toISOString()
-                };
-
-                localStorage.setItem('currentOKR', JSON.stringify(this.currentOKR));
-                this.displayOKR(this.currentOKR);
-                this.hideOKRForm();
+                const result = await supabaseManager.saveOKR(objective, keyResults);
                 
-                console.log('OKR已保存:', this.currentOKR);
-                alert('学习目标保存成功！');
+                if (result.success) {
+                    this.currentOKR = result.data[0];
+                    this.displayOKR(this.currentOKR);
+                    this.hideOKRForm();
+                    alert('学习目标保存成功！');
+                } else {
+                    alert('保存失败: ' + result.error);
+                }
             }
 
             displayOKR(okr) {
@@ -598,7 +669,7 @@
                         <div>
                             <h4 class="font-medium text-gray-900 mb-2">关键结果</h4>
                             <ul class="space-y-2">
-                                ${okr.keyResults.map((kr, index) => `
+                                ${okr.key_results.map((kr, index) => `
                                     <li class="flex items-center text-gray-700">
                                         <span class="w-6 h-6 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center text-sm font-medium mr-3">${index + 1}</span>
                                         ${kr}
@@ -611,7 +682,87 @@
                 display.classList.remove('hidden');
             }
 
-            sendMessage() {
+            async createNewChatSession() {
+                const result = await supabaseManager.createChatSession('新对话');
+                if (result.success) {
+                    this.currentSessionId = result.data.id;
+                    await this.loadChatSessions();
+                }
+            }
+
+            async loadChatSessions() {
+                const result = await supabaseManager.getChatSessions();
+                if (result.success) {
+                    this.updateChatSessionsDisplay(result.data);
+                    
+                    // 如果没有当前会话，使用第一个会话
+                    if (!this.currentSessionId && result.data.length > 0) {
+                        this.currentSessionId = result.data[0].id;
+                        await this.loadChatHistory();
+                    }
+                }
+            }
+
+            updateChatSessionsDisplay(sessions) {
+                const sessionsContainer = document.getElementById('chat-sessions');
+                if (!sessionsContainer) return;
+
+                if (sessions.length === 0) {
+                    sessionsContainer.innerHTML = `
+                        <div class="text-center text-gray-500 py-4">
+                            <i class="fas fa-comments text-2xl mb-2"></i>
+                            <p class="text-sm">还没有聊天记录</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                sessionsContainer.innerHTML = sessions.map(session => `
+                    <div class="p-3 bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer ${session.id === this.currentSessionId ? 'ring-2 ring-indigo-500' : ''}" 
+                         onclick="loadChatSession('${session.id}')">
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm font-medium text-gray-900">${session.title}</span>
+                            <span class="text-xs text-gray-500">${new Date(session.last_message_at).toLocaleDateString()}</span>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            async loadChatSession(sessionId) {
+                this.currentSessionId = sessionId;
+                await this.loadChatHistory();
+                await this.loadChatSessions(); // 刷新会话列表以更新选中状态
+            }
+
+            async loadChatHistory() {
+                if (!this.currentSessionId) return;
+
+                const result = await supabaseManager.getChatHistory(this.currentSessionId);
+                if (result.success) {
+                    this.chatHistory = result.data;
+                    this.displayChatHistory();
+                }
+            }
+
+            displayChatHistory() {
+                const messagesContainer = document.getElementById('chat-messages');
+                if (!messagesContainer) return;
+
+                // 清除现有消息（保留欢迎消息）
+                const welcomeMessage = messagesContainer.querySelector('.welcome-message');
+                messagesContainer.innerHTML = '';
+                
+                if (welcomeMessage) {
+                    messagesContainer.appendChild(welcomeMessage);
+                }
+
+                // 显示历史消息
+                this.chatHistory.forEach(message => {
+                    this.addMessageToChatDisplay(message.role, message.content);
+                });
+            }
+
+            async sendMessage() {
                 if (this.isProcessing) return;
                 
                 const input = document.getElementById('chat-input');
@@ -620,20 +771,39 @@
 
                 this.isProcessing = true;
                 input.value = '';
-                this.addMessageToChat('user', message);
+                
+                // 添加用户消息到界面
+                this.addMessageToChatDisplay('user', message);
+                
+                // 保存用户消息到数据库
+                await supabaseManager.saveChatMessage(this.currentSessionId, 'user', message);
+                
+                // 显示AI思考状态
+                const thinkingDiv = this.addMessageToChatDisplay('assistant', '正在思考...', true);
                 
                 // 模拟AI响应
-                setTimeout(() => {
+                setTimeout(async () => {
+                    // 移除思考状态
+                    if (thinkingDiv) {
+                        thinkingDiv.remove();
+                    }
+                    
                     const response = this.getAIResponse(message);
-                    this.addMessageToChat('assistant', response);
+                    this.addMessageToChatDisplay('assistant', response);
+                    
+                    // 保存AI响应到数据库
+                    await supabaseManager.saveChatMessage(this.currentSessionId, 'assistant', response);
+                    
                     this.isProcessing = false;
-                    this.saveChatHistory();
-                }, 1000);
+                    
+                    // 刷新聊天会话列表
+                    await this.loadChatSessions();
+                }, 1000 + Math.random() * 2000);
             }
 
-            addMessageToChat(role, content) {
+            addMessageToChatDisplay(role, content, isTemporary = false) {
                 const messagesContainer = document.getElementById('chat-messages');
-                if (!messagesContainer) return;
+                if (!messagesContainer) return null;
 
                 const messageDiv = document.createElement('div');
                 messageDiv.className = 'flex items-start space-x-3 chat-message';
@@ -643,7 +813,7 @@
                         <div class="h-8 w-8 bg-indigo-600 rounded-full flex items-center justify-center flex-shrink-0">
                             <i class="fas fa-user text-white text-sm"></i>
                         </div>
-                        <div class="bg-indigo-100 rounded-lg px-4 py-2 max-w-xs lg:max-w-md ml-auto">
+                        <div class="bg-indigo-100 rounded-lg px-4 py-2 max-w-xs lg:max-w-md">
                             <p class="text-sm text-gray-800">${content}</p>
                         </div>
                     `;
@@ -653,13 +823,15 @@
                             <i class="fas fa-robot text-white text-sm"></i>
                         </div>
                         <div class="bg-gray-100 rounded-lg px-4 py-2 max-w-xs lg:max-w-md">
-                            <p class="text-sm text-gray-800">${content}</p>
+                            <p class="text-sm text-gray-800 whitespace-pre-line">${content}</p>
                         </div>
                     `;
                 }
 
                 messagesContainer.appendChild(messageDiv);
                 messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+                return isTemporary ? messageDiv : null;
             }
 
             getAIResponse(message) {
@@ -667,18 +839,56 @@
                 
                 if (lowerMessage.includes('今天') && (lowerMessage.includes('做什么') || lowerMessage.includes('学什么'))) {
                     if (this.currentOKR) {
-                        return `基于你的学习目标"${this.currentOKR.objective}"，我建议你今天：\n\n1. 复习相关的基础概念\n2. 完成一个小练习项目\n3. 阅读相关文档或教程\n\n专注于你的关键结果：${this.currentOKR.keyResults[0] || '继续努力！'}`;
+                        return `基于你的学习目标"${this.currentOKR.objective}"，我建议你今天：
+
+📋 **今日学习任务**：
+1. 复习相关的基础概念（30分钟）
+2. 完成一个小练习项目（45分钟）
+3. 阅读相关文档或教程（30分钟）
+4. 整理学习笔记（15分钟）
+
+专注于你的关键结果：${this.currentOKR.key_results[0] || '继续努力！'}
+
+加油！💪`;
                     } else {
                         return '建议你先设置一个学习目标，这样我就能为你提供更个性化的学习建议了！点击左侧的"立即创建"来设置你的OKR目标。';
                     }
                 }
                 
                 if (lowerMessage.includes('数据结构')) {
-                    return '数据结构是计算机科学中组织和存储数据的方式。常见的数据结构包括：\n\n• 数组：线性存储结构\n• 链表：动态数据结构\n• 栈：后进先出(LIFO)\n• 队列：先进先出(FIFO)\n• 树：层次化结构\n• 图：网络结构\n\n你想了解哪种数据结构的详细信息？';
+                    return `数据结构是计算机科学中组织和存储数据的方式。常见的数据结构包括：
+
+🔹 **线性结构**：
+• 数组：连续存储，随机访问
+• 链表：动态存储，顺序访问
+• 栈：后进先出(LIFO)
+• 队列：先进先出(FIFO)
+
+🔹 **非线性结构**：
+• 树：层次化结构
+• 图：网络结构
+• 哈希表：键值对存储
+
+你想了解哪种数据结构的详细信息？`;
                 }
                 
                 if (lowerMessage.includes('学习计划')) {
-                    return '制定学习计划的建议：\n\n1. 设定明确的学习目标\n2. 分解为可执行的小任务\n3. 安排合理的时间表\n4. 定期复习和总结\n5. 保持学习的连续性\n\n你可以先在左侧设置你的OKR目标，我会帮你制定更具体的计划！';
+                    return `制定学习计划的建议：
+
+📝 **制定步骤**：
+1. 设定明确的学习目标
+2. 分解为可执行的小任务
+3. 安排合理的时间表
+4. 定期复习和总结
+5. 保持学习的连续性
+
+💡 **实用技巧**：
+• 使用番茄工作法提高专注度
+• 设置学习里程碑和奖励机制
+• 找到适合自己的学习时间段
+• 定期回顾和调整计划
+
+你可以先在左侧设置你的OKR目标，我会帮你制定更具体的计划！`;
                 }
                 
                 // 默认响应
@@ -692,68 +902,116 @@
                 return responses[Math.floor(Math.random() * responses.length)];
             }
 
-            loadChatHistory() {
-                const historyData = localStorage.getItem('chatHistory');
-                if (historyData) {
-                    try {
-                        this.chatHistory = JSON.parse(historyData);
-                        this.updateChatSessions();
-                    } catch (e) {
-                        console.error('聊天历史解析失败:', e);
+            showLoading(show) {
+                const loading = document.getElementById('loading');
+                if (loading) {
+                    if (show) {
+                        loading.classList.remove('hidden');
+                    } else {
+                        loading.classList.add('hidden');
                     }
                 }
             }
-
-            saveChatHistory() {
-                const messages = document.querySelectorAll('#chat-messages .chat-message');
-                const currentSession = {
-                    id: Date.now().toString(),
-                    timestamp: new Date().toISOString(),
-                    preview: messages.length > 1 ? messages[1].textContent.substring(0, 30) + '...' : '新对话',
-                    messageCount: messages.length - 1 // 减去欢迎消息
-                };
-                
-                this.chatHistory.unshift(currentSession);
-                if (this.chatHistory.length > 10) {
-                    this.chatHistory = this.chatHistory.slice(0, 10);
-                }
-                
-                localStorage.setItem('chatHistory', JSON.stringify(this.chatHistory));
-                this.updateChatSessions();
-            }
-
-            updateChatSessions() {
-                const sessionsContainer = document.getElementById('chat-sessions');
-                if (!sessionsContainer) return;
-
-                if (this.chatHistory.length === 0) {
-                    sessionsContainer.innerHTML = `
-                        <div class="text-center text-gray-500 py-4">
-                            <i class="fas fa-comments text-2xl mb-2"></i>
-                            <p class="text-sm">还没有聊天记录</p>
-                        </div>
-                    `;
-                    return;
-                }
-
-                sessionsContainer.innerHTML = this.chatHistory.map(session => `
-                    <div class="p-3 bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer">
-                        <div class="flex items-center justify-between">
-                            <span class="text-sm font-medium text-gray-900">${session.preview}</span>
-                            <span class="text-xs text-gray-500">${session.messageCount}条</span>
-                        </div>
-                        <div class="text-xs text-gray-500 mt-1">
-                            ${new Date(session.timestamp).toLocaleDateString()}
-                        </div>
-                    </div>
-                `).join('');
-            }
         }
+
+        // 全局函数
+        window.loadChatSession = (sessionId) => {
+            if (window.supabaseStarApp) {
+                window.supabaseStarApp.loadChatSession(sessionId);
+            }
+        };
 
         // 初始化应用
         document.addEventListener('DOMContentLoaded', () => {
-            new StarApp();
+            window.supabaseStarApp = new SupabaseStarApp();
+            initVersionHistory();
         });
+
+        // 初始化版本历史记录
+        function initVersionHistory() {
+            // 设置当前版本号
+            const versionNumberEl = document.getElementById('version-number');
+            if (versionNumberEl && window.versionHistory) {
+                versionNumberEl.textContent = 'v' + window.versionHistory.currentVersion;
+            }
+
+            // 绑定历史记录按钮点击事件
+            const showHistoryBtn = document.getElementById('show-history-btn');
+            const closeHistoryBtn = document.getElementById('close-history-btn');
+            const historyModal = document.getElementById('history-modal');
+            
+            if (showHistoryBtn && historyModal) {
+                showHistoryBtn.addEventListener('click', () => {
+                    displayVersionHistory();
+                    historyModal.classList.remove('hidden');
+                });
+            }
+            
+            if (closeHistoryBtn && historyModal) {
+                closeHistoryBtn.addEventListener('click', () => {
+                    historyModal.classList.add('hidden');
+                });
+            }
+        }
+
+        // 显示版本历史记录
+        function displayVersionHistory() {
+            if (!window.versionHistory) return;
+            
+            const historyContentEl = document.getElementById('history-content');
+            const todoListEl = document.getElementById('todo-list');
+            
+            if (!historyContentEl || !todoListEl) return;
+            
+            // 清空内容
+            historyContentEl.innerHTML = '';
+            todoListEl.innerHTML = '';
+            
+            // 添加版本历史记录
+            window.versionHistory.releases.forEach(release => {
+                const releaseEl = document.createElement('div');
+                releaseEl.className = 'border-l-2 border-indigo-500 pl-4 pb-4';
+                
+                releaseEl.innerHTML = `
+                    <div class="flex items-center justify-between">
+                        <h4 class="font-medium text-gray-900">v${release.version} - ${release.title}</h4>
+                        <span class="text-sm text-gray-500">${release.date}</span>
+                    </div>
+                    <p class="mt-1 text-sm text-gray-600">${release.description}</p>
+                    <ul class="mt-2 space-y-1">
+                        ${release.updates.map(update => `
+                            <li class="text-sm text-gray-600 flex items-start">
+                                <span class="text-indigo-500 mr-2">•</span>
+                                <span>${update}</span>
+                            </li>
+                        `).join('')}
+                    </ul>
+                `;
+                
+                historyContentEl.appendChild(releaseEl);
+            });
+            
+            // 添加待办事项
+            window.versionHistory.todoList.forEach(todo => {
+                const todoEl = document.createElement('div');
+                todoEl.className = 'bg-gray-50 p-3 rounded-lg';
+                
+                todoEl.innerHTML = `
+                    <div class="flex items-center justify-between">
+                        <h5 class="font-medium text-gray-900">${todo.title}</h5>
+                        <span class="text-xs px-2 py-1 rounded-full ${
+                            todo.priority === '高' ? 'bg-red-100 text-red-800' : 
+                            todo.priority === '中' ? 'bg-yellow-100 text-yellow-800' : 
+                            'bg-green-100 text-green-800'
+                        }">${todo.priority}优先级</span>
+                    </div>
+                    <p class="mt-1 text-sm text-gray-600">${todo.description}</p>
+                    <div class="mt-2 text-xs text-gray-500">状态: ${todo.status}</div>
+                `;
+                
+                todoListEl.appendChild(todoEl);
+            });
+        }
     </script>
 </body>
 </html>
